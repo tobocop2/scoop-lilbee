@@ -1,0 +1,161 @@
+name: Update manifests
+
+# Pins every manifest to the newest lilbee release, proves it installs on Windows,
+# and only then commits.
+#
+# The lilbee release pipeline has no push rights here, so this polls instead of
+# being triggered. Use the workflow_dispatch input to publish a release the moment
+# it lands, or to re-pin an older tag.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to pin (e.g. v0.6.90b435). Defaults to the newest release."
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update
+  cancel-in-progress: false
+
+env:
+  UPSTREAM: tobocop2/lilbee
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.render.outputs.version }}
+      manifests: ${{ steps.render.outputs.manifests }}
+      changed: ${{ steps.render.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Pin the manifests to the release
+        id: render
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "${TAG}" ]; then
+            ref="tags/${TAG}"
+          else
+            ref="latest"
+          fi
+          gh api "/repos/${UPSTREAM}/releases/${ref}" > /tmp/release.json
+          tag=$(jq -r '.tag_name' /tmp/release.json)
+          version="${tag#v}"
+          # GitHub publishes each asset's sha256 as its digest, so pinning a release
+          # never downloads the binaries.
+          jq -r '.assets[] | "\(.name)\t\(.digest | sub("sha256:"; ""))"' /tmp/release.json > /tmp/assets.tsv
+
+          get_sha () { awk -F'\t' -v name="$1" '$1 == name { print $2 }' /tmp/assets.tsv; }
+          sha_windows=$(get_sha lilbee-windows-x86_64.exe)
+          sha_cu125=$(get_sha lilbee-windows-x86_64-cu125.exe)
+          sha_cu124=$(get_sha lilbee-windows-x86_64-cu124.exe)
+          sha_compat=$(get_sha lilbee-compat-windows-x86_64.exe)
+
+          for asset in lilbee-windows-x86_64.exe lilbee-windows-x86_64-cu125.exe lilbee-windows-x86_64-cu124.exe; do
+            grep -q "^${asset}	" /tmp/assets.tsv || { echo "${tag} has no ${asset}" >&2; exit 1; }
+          done
+
+          python3 tools/render_manifest.py bucket/lilbee.json --version "${version}" \
+            --sha-windows "${sha_windows}" \
+            --sha-windows-cu125 "${sha_cu125}" --sha-windows-cu124 "${sha_cu124}"
+          python3 tools/render_manifest.py bucket/lilbee-cuda.json --cuda --version "${version}" \
+            --sha-windows-cu125 "${sha_cu125}"
+          manifests='["lilbee.json","lilbee-cuda.json"]'
+          # The pre-Haswell build is a soft cell upstream: a release can ship without
+          # one. Leave that manifest on its old pin rather than holding back the
+          # other two.
+          if [ -n "${sha_compat}" ]; then
+            python3 tools/render_manifest.py bucket/lilbee-compat.json --compat --version "${version}" \
+              --sha-windows-compat "${sha_compat}"
+            manifests='["lilbee.json","lilbee-cuda.json","lilbee-compat.json"]'
+          else
+            echo "::warning::${tag} has no lilbee-compat-windows-x86_64.exe; lilbee-compat.json keeps its current pin"
+          fi
+
+          {
+            echo "version=${version}"
+            echo "manifests=${manifests}"
+          } >> "${GITHUB_OUTPUT}"
+          if git diff --quiet -- bucket; then
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+            echo "already pinned to ${tag}"
+          else
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+            echo "pinning to ${tag}"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        if: steps.render.outputs.changed == 'true'
+        with:
+          name: manifests
+          path: bucket/
+
+  # One runner per manifest: each installs the `lilbee` shim, so they cannot share
+  # a machine.
+  validate:
+    needs: render
+    if: needs.render.outputs.changed == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        manifest: ${{ fromJSON(needs.render.outputs.manifests) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: manifests
+          path: bucket
+
+      - name: Check the CUDA gate
+        # The runner has no NVIDIA card, so installing only ever proves the Vulkan
+        # branch. This stubs nvidia-smi and covers the other one.
+        if: matrix.manifest == 'lilbee.json'
+        shell: pwsh
+        run: ./tools/test_cuda_gate.ps1
+
+      - uses: ./.github/actions/validate-install
+        with:
+          manifest-path: bucket/${{ matrix.manifest }}
+          expected-version: lilbee ${{ needs.render.outputs.version }}
+
+  commit:
+    needs: [render, validate]
+    if: needs.render.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: manifests
+          path: bucket
+
+      - name: Commit the pinned manifests
+        env:
+          VERSION: ${{ needs.render.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "lilbee-bot"
+          git config user.email "lilbee-bot@users.noreply.github.com"
+          git add bucket
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+          git commit -m "Pin lilbee ${VERSION}"
+          git push
