@@ -1,13 +1,16 @@
 name: Smoke test the published bucket
 
 # Runs the install command exactly as the lilbee README documents it, against the
-# published bucket. The other workflows install a manifest by local path, which
-# does not exercise `scoop bucket add` or the clone Scoop keeps for a user.
+# published bucket. lilbee installs a manifest by local path before it pushes,
+# which does not exercise `scoop bucket add` or the clone Scoop keeps for a user.
 
 on:
+  # Every publish lands as a push to bucket/, so each one is smoke tested. No
+  # schedule: lilbee pushes here, nothing here polls lilbee.
+  push:
+    paths:
+      - bucket/**
   workflow_dispatch:
-  schedule:
-    - cron: "17 6 * * 1"
 
 permissions:
   contents: read

@@ -33,7 +33,7 @@ That leaves your installed lilbee alone. It only replaces where Scoop reads mani
 
 ## How the manifests stay current
 
-The `Update manifests` workflow polls the lilbee releases, pins each manifest to the newest one, installs it on a Windows runner, and commits only if that install runs. Every version and hash here is written by that workflow, so edit a manifest's shape, never its pins.
+lilbee's release pipeline pushes here, the same way it pushes the Homebrew tap. Its `scoop` job renders the version and hashes into these manifests, installs each one on a Windows runner, and pushes only if that install runs. Nothing here polls lilbee. Every version and hash is written by that job, so edit a manifest's shape, never its pins.
 
 ## License
 
