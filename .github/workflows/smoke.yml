@@ -1,0 +1,49 @@
+name: Smoke test the published bucket
+
+# Runs the install command exactly as the lilbee README documents it, against the
+# published bucket. The other workflows install a manifest by local path, which
+# does not exercise `scoop bucket add` or the clone Scoop keeps for a user.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Install Scoop, add the bucket, install lilbee
+        shell: powershell
+        run: |
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          $ErrorActionPreference = 'Stop'
+          # The hosted runner is admin, so Scoop needs -RunAsAdmin to install.
+          Invoke-WebRequest -UseBasicParsing get.scoop.sh -OutFile "$env:TEMP\install-scoop.ps1"
+          & "$env:TEMP\install-scoop.ps1" -RunAsAdmin
+          $env:Path = "$env:USERPROFILE\scoop\shims;$env:Path"
+          scoop install git
+          if ($LASTEXITCODE -ne 0) { throw "scoop install git failed" }
+          scoop bucket add lilbee https://github.com/tobocop2/scoop-lilbee
+          if ($LASTEXITCODE -ne 0) { throw "scoop bucket add failed" }
+          scoop install lilbee
+          if ($LASTEXITCODE -ne 0) { throw "scoop install lilbee failed" }
+          $version = (& lilbee --version | Out-String).Trim()
+          Write-Host "installed: $version"
+          if ($version -notmatch '^lilbee \S+$') { throw "unexpected version output: $version" }
+
+      - name: A second update is a no-op, not an error
+        # This is what broke for everyone who added the bucket while it lived in
+        # the lilbee repository: Scoop updates a bucket with a plain `git pull`.
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:Path = "$env:USERPROFILE\scoop\shims;$env:Path"
+          scoop update
+          if ($LASTEXITCODE -ne 0) { throw "scoop update failed" }
+          scoop status
+          if ($LASTEXITCODE -ne 0) { throw "scoop status failed" }
