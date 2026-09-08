@@ -3,13 +3,16 @@ name: Update manifests
 # Pins every manifest to the newest lilbee release, proves it installs on Windows,
 # and only then commits.
 #
-# The lilbee release pipeline has no push rights here, so this polls instead of
-# being triggered. Use the workflow_dispatch input to publish a release the moment
-# it lands, or to re-pin an older tag.
+# lilbee's verify-release dispatches this as soon as it promotes a tag, so Scoop
+# publishes with every other channel. The schedule is the backstop for a promotion
+# that ran without the dispatch token, and the tag input re-pins an older release.
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    # Backstop only: lilbee dispatches this the moment it promotes a tag. The
+    # offset avoids the top of the hour, which GitHub names as the peak where
+    # queued scheduled runs are dropped.
+    - cron: "13,43 * * * *"
   workflow_dispatch:
     inputs:
       tag:
