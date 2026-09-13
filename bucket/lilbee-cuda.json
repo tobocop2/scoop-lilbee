@@ -1,5 +1,5 @@
 {
-    "version": "0.6.90b439",
+    "version": "0.6.90b440",
     "description": "Run and manage local AI models, then search your files, code, and crawled web pages, with answers that cite the source. CUDA build for NVIDIA GPUs (driver 555.85+); one program, no server to run.",
     "homepage": "https://lilbee.sh/",
     "license": {
@@ -8,8 +8,8 @@
     },
     "architecture": {
         "64bit": {
-            "url": "https://github.com/tobocop2/lilbee/releases/download/v0.6.90b439/lilbee-windows-x86_64-cu125.exe#/lilbee.exe",
-            "hash": "7797f024e637e68f7fc6ae48ce9b77d153ae955e982522a58221a315b09c0e17"
+            "url": "https://github.com/tobocop2/lilbee/releases/download/v0.6.90b440/lilbee-windows-x86_64-cu125.exe#/lilbee.exe",
+            "hash": "c4abc90e2143446941b70bc73143c39a785a804172587c2830a0d936d441f0ae"
         }
     },
     "bin": "lilbee.exe",
