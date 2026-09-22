@@ -9,7 +9,7 @@
     "architecture": {
         "64bit": {
             "url": "https://github.com/tobocop2/lilbee/releases/download/v0.6.90b443/lilbee-compat-windows-x86_64.exe#/lilbee.exe",
-            "hash": "3a20feb00e26fd9bf45ba1ffcb222d39ea2a6c641ab5ba8525d90809233180a8"
+            "hash": "5b6affa1e4bf70a1861fd563886d66cbf770ff7e29b8ba29367304e9611dcb84"
         }
     },
     "bin": "lilbee.exe"
