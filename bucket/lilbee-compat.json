@@ -1,5 +1,5 @@
 {
-    "version": "0.6.90b443",
+    "version": "0.6.90b444",
     "description": "Run and manage local AI models, then search your files, code, and crawled web pages, with answers that cite the source. Pre-Haswell CPU build for older processors.",
     "homepage": "https://lilbee.sh/",
     "license": {
@@ -8,8 +8,8 @@
     },
     "architecture": {
         "64bit": {
-            "url": "https://github.com/tobocop2/lilbee/releases/download/v0.6.90b443/lilbee-compat-windows-x86_64.exe#/lilbee.exe",
-            "hash": "3a20feb00e26fd9bf45ba1ffcb222d39ea2a6c641ab5ba8525d90809233180a8"
+            "url": "https://github.com/tobocop2/lilbee/releases/download/v0.6.90b444/lilbee-compat-windows-x86_64.exe#/lilbee.exe",
+            "hash": "8e53fe3dab5033b347e405c13c6f9ab0dda04994b9d78584f125948746d3e184"
         }
     },
     "bin": "lilbee.exe"
