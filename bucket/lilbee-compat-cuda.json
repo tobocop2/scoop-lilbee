@@ -1,0 +1,16 @@
+{
+    "version": "0.6.90b691",
+    "description": "Run and manage local AI models, then search your files, code, and crawled web pages, with answers that cite the source. Pre-Haswell CPU build with NVIDIA CUDA 12.4 (driver 551.61+).",
+    "homepage": "https://lilbee.sh/",
+    "license": {
+        "identifier": "MIT",
+        "url": "https://github.com/tobocop2/lilbee/blob/main/LICENSE"
+    },
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/tobocop2/lilbee/releases/download/v0.6.90b691/lilbee-compat-windows-x86_64-cu124.exe#/lilbee.exe",
+            "hash": "ea33afe0f7766af678f4b004f51f86d284239e5884e623e4f81847ff0f4242a3"
+        }
+    },
+    "bin": "lilbee.exe"
+}
